@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <!-- IMPORTANT: stops zoom on mobile -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <title>Flappy Win</title>
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      touch-action: manipulation;
+      -ms-touch-action: manipulation;
+    }
+
+    #game {
+      width: 100vw;
+      height: 100vh;
+      background: linear-gradient(#70c5ce, #cceeff);
+      position: relative;
+    }
+
+    /* Clouds */
+    .cloud {
+      position: absolute;
+      width: 140px;
+      height: 50px;
+      background: white;
+      border-radius: 50px;
+      opacity: 0.8;
+      animation: cloudMove 30s linear infinite;
+    }
+
+    @keyframes cloudMove {
+      from { left: -150px; }
+      to { left: 110vw; }
+    }
+
+    /* Bird */
+    #bird {
+      position: absolute;
+      left: 120px;
+      top: 250px;
+      width: 42px;
+      height: 32px;
+      background: url('bird-icon.png') no-repeat center;
+      background-size: contain;
+    }
+
+    
+    /* Pipes */
+    .pipe {
+      position: absolute;
+      width: 70px;
+      background: #2ecc71;
+    }
+
+    .top { top: 0; }
+    .bottom { bottom: 0; }
+
+    #score {
+      position: absolute;
+      top: 20px;
+      width: 100%;
+      text-align: center;
+      font-size: 32px;
+      color: white;
+      text-shadow: 2px 2px 4px #000;
+    }
+
+    #ready {
+      position: absolute;
+      top: 45%;
+      width: 100%;
+      text-align: center;
+      font-size: 26px;
+      color: white;
+      text-shadow: 2px 2px 4px #000;
+    }
+
+    #scam {
+      display: none;
+      width: 100vw;
+      height: 100vh;
+      background: #111;
+      color: red;
+      text-align: center;
+      padding-top: 120px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="game">
+  <div class="cloud" style="top:80px;"></div>
+  <div class="cloud" style="top:160px; animation-duration:40s;"></div>
+
+  <div id="score">0</div>
+  <div id="ready">Tap or Press SPACE to Fly</div>
+  <div id="bird"></div>
+</div>
+
+<div id="scam">
+  <h1>⚠️ YOU GOT SCAMMED!</h1>
+  <p>This game looked real.</p>
+  <p>Scams also look real.</p>
+  <p><b>Stop. Think. Verify.</b></p>
+  <p>Every day, India sees 3,500+ online financial fraud reports — a 200% spike from last year (National Cyber Security Coordinator). At Experian, we prioritize your safety in the digital age. Beware of fraudsters using fake customer care details, also known as ‘Number Spoofing’ on forums, social media, emails, and messages. They mimic real support lines, risking your data and inviting fraud.</p>
+</div>
+
+<script>
+  const bird = document.getElementById("bird");
+  const game = document.getElementById("game");
+
+  let birdY = 250;
+  let velocity = 0;
+  let gravity = 0.6;
+  let score = 0;
+  let pipesCleared = 0;
+  let running = false;
+  let crashed = false;
+
+  let gameLoopInterval;
+
+  /* START GAME */
+  function startGame() {
+    if (running) return;
+    document.getElementById("ready").style.display = "none";
+    running = true;
+    createPipe();
+    gameLoopInterval = setInterval(gameLoop, 20);
+  }
+
+  /* FLAP */
+  function flap() {
+    if (!running) {
+      startGame();
+      return;
+    }
+
+    if (crashed) {
+      game.style.display = "none";
+      document.getElementById("scam").style.display = "block";
+      return;
+    }
+
+    velocity = -7;
+  }
+
+  /* PC CONTROLS */
+  document.addEventListener("keydown", (e) => {
+    if (e.code === "Space" || e.code === "ArrowUp") {
+      flap();
+    }
+  });
+
+  /* MOBILE CONTROLS */
+  document.addEventListener("touchstart", function (e) {
+    e.preventDefault();
+    flap();
+  }, { passive: false });
+
+  /* GAME LOOP */
+  function gameLoop() {
+    if (!running || crashed) return;
+
+    velocity += gravity;
+    birdY += velocity;
+    bird.style.top = birdY + "px";
+
+    if (birdY < 0) birdY = 0;
+    if (birdY > window.innerHeight - 40)
+      birdY = window.innerHeight - 40;
+  }
+
+  /* CREATE PIPE */
+  function createPipe() {
+    if (crashed) return;
+
+    const gap = 180;
+    const topHeight = Math.random() * 200 + 60;
+    const bottomHeight = window.innerHeight - topHeight - gap;
+
+    const pipeTop = document.createElement("div");
+    pipeTop.className = "pipe top";
+    pipeTop.style.height = topHeight + "px";
+    pipeTop.style.left = "100vw";
+
+    const pipeBottom = document.createElement("div");
+    pipeBottom.className = "pipe bottom";
+    pipeBottom.style.height = bottomHeight + "px";
+    pipeBottom.style.left = "100vw";
+
+    game.appendChild(pipeTop);
+    game.appendChild(pipeBottom);
+
+    let pipeX = window.innerWidth;
+    let passed = false;
+
+    const movePipe = setInterval(() => {
+      if (crashed) {
+        clearInterval(movePipe);
+        return;
+      }
+
+      pipeX -= 3;
+      pipeTop.style.left = pipeX + "px";
+      pipeBottom.style.left = pipeX + "px";
+
+      if (!passed && pipeX < 120) {
+        passed = true;
+        score++;
+        pipesCleared++;
+        document.getElementById("score").innerText = score;
+
+        /* AFTER FIRST PIPE → FAKE CRASH */
+        if (pipesCleared >= 1) {
+          crashed = true;
+          clearInterval(gameLoopInterval);
+        }
+      }
+
+      if (pipeX < -80) {
+        pipeTop.remove();
+        pipeBottom.remove();
+        clearInterval(movePipe);
+      }
+    }, 20);
+
+    setTimeout(createPipe, 2600);
+  }
+</script>
+
+</body>
+</html>
