@@ -10,7 +10,6 @@ body {
   margin: 0;
   overflow: hidden;
   font-family: Arial, sans-serif;
-  touch-action: manipulation;
 }
 
 #game {
@@ -18,6 +17,7 @@ body {
   height: 100vh;
   background: linear-gradient(#70c5ce, #cceeff);
   position: relative;
+  touch-action: manipulation;
 }
 
 /* Bird */
@@ -43,7 +43,7 @@ body {
 .bottom { bottom: 0; }
 
 /* UI */
-#score, #round, #ready, #retry {
+#score, #round, #ready {
   position: absolute;
   width: 100%;
   text-align: center;
@@ -58,11 +58,17 @@ body {
 
 #retry {
   display: none;
+  position: absolute;
   top: 50%;
+  width: 100%;
+  text-align: center;
+  z-index: 10;
 }
+
 #retry button {
   font-size: 20px;
   padding: 12px 26px;
+  cursor: pointer;
 }
 
 #scam {
@@ -92,17 +98,13 @@ body {
 
 <div id="scam">
   <h1>⚠️ YOU GOT SCAMMED!</h1>
-  <p>This game looked real.</p>
-  <p>Scams also look real.</p>
-  <p><b>Stop. Think. Verify.</b></p>
-  <p>Every day, India sees 3,500+ online financial fraud reports — a 200% spike from last year (National Cyber Security Coordinator).</p>
-  <p>At Experian, we prioritize your safety in the digital age. Beware of fraudsters using fake customer care details, also known as ‘Number Spoofing’ on forums, social media, emails, and messages.</p>
-  <p>They mimic real support lines, risking your data and inviting fraud.</p>
+  <p>Scams look real. Stop. Think. Verify.</p>
 </div>
 
 <script>
 const bird = document.getElementById("bird");
 const game = document.getElementById("game");
+const retryBox = document.getElementById("retry");
 
 let birdY = 250;
 let velocity = 0;
@@ -123,8 +125,9 @@ let pipeInterval;
 function startGame() {
   roundOver = false;
   running = true;
+
   document.getElementById("ready").style.display = "none";
-  document.getElementById("retry").style.display = "none";
+  retryBox.style.display = "none";
 
   gameLoopInterval = setInterval(gameLoop, 20);
   pipeInterval = setInterval(createPipe, 2600);
@@ -137,10 +140,15 @@ function flap() {
   velocity = -7;
 }
 
+/* KEYBOARD */
 document.addEventListener("keydown", e => {
   if (e.code === "Space" || e.code === "ArrowUp") flap();
 });
-document.addEventListener("touchstart", e => {
+
+/* ✅ MOBILE TOUCH — ONLY GAME AREA */
+game.addEventListener("touchstart", e => {
+  // If retry button is visible, DO NOT flap
+  if (retryBox.style.display === "block") return;
   e.preventDefault();
   flap();
 }, { passive: false });
@@ -156,7 +164,6 @@ function gameLoop() {
   const birdRect = bird.getBoundingClientRect();
   const gameRect = game.getBoundingClientRect();
 
-  // Ground / ceiling collision (accurate)
   if (
     birdRect.top <= gameRect.top ||
     birdRect.bottom >= gameRect.bottom
@@ -170,13 +177,9 @@ function gameLoop() {
     p.top.style.left = p.x + "px";
     p.bottom.style.left = p.x + "px";
 
-    const topRect = p.top.getBoundingClientRect();
-    const bottomRect = p.bottom.getBoundingClientRect();
-
-    // ✅ Pixel-perfect collision
     if (
-      rectsOverlap(birdRect, topRect) ||
-      rectsOverlap(birdRect, bottomRect)
+      overlap(birdRect, p.top.getBoundingClientRect()) ||
+      overlap(birdRect, p.bottom.getBoundingClientRect())
     ) {
       endRound();
     }
@@ -189,23 +192,17 @@ function gameLoop() {
   });
 }
 
-/* RECTANGLE COLLISION */
-function rectsOverlap(a, b) {
-  return !(
-    a.right < b.left ||
-    a.left > b.right ||
-    a.bottom < b.top ||
-    a.top > b.bottom
-  );
+/* COLLISION */
+function overlap(a, b) {
+  return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
 }
 
 /* CREATE PIPE */
 function createPipe() {
   const gap = 180;
-  const gameHeight = game.clientHeight;
-
+  const h = game.clientHeight;
   const topHeight = Math.random() * 200 + 80;
-  const bottomHeight = gameHeight - topHeight - gap;
+  const bottomHeight = h - topHeight - gap;
 
   const top = document.createElement("div");
   const bottom = document.createElement("div");
@@ -219,12 +216,7 @@ function createPipe() {
   game.appendChild(top);
   game.appendChild(bottom);
 
-  pipes.push({
-    top,
-    bottom,
-    x: game.clientWidth,
-    passed: false
-  });
+  pipes.push({ top, bottom, x: game.clientWidth, passed: false });
 }
 
 /* END ROUND */
@@ -240,7 +232,7 @@ function endRound() {
   document.getElementById("score").innerText = "Score: 0";
 
   if (round < maxRounds) {
-    document.getElementById("retry").style.display = "block";
+    retryBox.style.display = "block";
   } else {
     game.style.display = "none";
     document.getElementById("scam").style.display = "block";
@@ -268,4 +260,3 @@ function retryRound() {
 
 </body>
 </html>
-
