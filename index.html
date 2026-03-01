@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
 <title>Flappy Win</title>
 
 <style>
@@ -66,7 +65,7 @@ body {
   text-align: center;
   color: white;
   text-shadow: 2px 2px 4px #000;
-  z-index: 5; /* 🔥 brings UI to front */
+  z-index: 5;
 }
 
 #score {
@@ -76,7 +75,7 @@ body {
 
 #round {
   top: 60px;
-  font-size: 0px;
+  font-size: 18px;
 }
 
 #ready {
@@ -129,9 +128,7 @@ body {
   <p>This game looked real.</p>
   <p>Scams also look real.</p>
   <p><b>Stop. Think. Verify.</b></p>
-  <p>Every day, India sees 3,500+ online financial fraud reports — a 200% spike from last year (National Cyber Security Coordinator).</p>
-  <p>At Experian, we prioritize your safety in the digital age. Beware of fraudsters using fake customer care details, also known as ‘Number Spoofing’ on forums, social media, emails, and messages.</p>
-  <p>They mimic real support lines, risking your data and inviting fraud.</p>
+  <p>India sees 3,500+ online fraud reports daily.</p>
 </div>
 
 <script>
@@ -143,6 +140,8 @@ let velocity = 0;
 let gravity = 0.6;
 
 let running = false;
+let roundOver = false;
+
 let score = 0;
 let round = 1;
 const maxRounds = 3;
@@ -153,13 +152,16 @@ let pipeInterval;
 
 const birdX = 120;
 const birdWidth = 42;
+const birdHeight = 32;
 const pipeWidth = 70;
 
 /* START GAME */
 function startGame() {
+  roundOver = false;
+  running = true;
+
   document.getElementById("ready").style.display = "none";
   document.getElementById("retry").style.display = "none";
-  running = true;
 
   gameLoopInterval = setInterval(gameLoop, 20);
   pipeInterval = setInterval(createPipe, 2600);
@@ -167,7 +169,8 @@ function startGame() {
 
 /* FLAP */
 function flap() {
-  if (!running) startGame();
+  if (!running && !roundOver) startGame();
+  if (!running) return;
   velocity = -7;
 }
 
@@ -188,8 +191,7 @@ function gameLoop() {
   birdY += velocity;
   bird.style.top = birdY + "px";
 
-  // Ground / sky collision
-  if (birdY < 0 || birdY > window.innerHeight - 32) {
+  if (birdY < 0 || birdY > window.innerHeight - birdHeight) {
     endRound();
   }
 
@@ -198,20 +200,18 @@ function gameLoop() {
     p.top.style.left = p.x + "px";
     p.bottom.style.left = p.x + "px";
 
-    // Collision with pipe
     if (
       birdX < p.x + pipeWidth &&
       birdX + birdWidth > p.x &&
       (birdY < p.topHeight ||
-       birdY + 32 > window.innerHeight - p.bottomHeight)
+       birdY + birdHeight > window.innerHeight - p.bottomHeight)
     ) {
       endRound();
     }
 
-    // Score increase when pipe passed
     if (!p.passed && p.x + pipeWidth < birdX) {
       p.passed = true;
-      score += 1;
+      score++;
       document.getElementById("score").innerText = `Score: ${score}`;
     }
   });
@@ -247,14 +247,15 @@ function createPipe() {
 
 /* END ROUND */
 function endRound() {
-  // Reset score when player loses a round
-  score = 0;
-  document.getElementById("score").innerText = "Score: 0";
-  if (!running) return;
+  if (roundOver) return;
+  roundOver = true;
   running = false;
 
   clearInterval(gameLoopInterval);
   clearInterval(pipeInterval);
+
+  score = 0;
+  document.getElementById("score").innerText = "Score: 0";
 
   if (round < maxRounds) {
     document.getElementById("retry").style.display = "block";
@@ -267,7 +268,7 @@ function endRound() {
 /* RETRY */
 function retryRound() {
   round++;
-  document.getElementById("round").innerText = `Round: ${round} / 3`;
+  document.getElementById("round").innerText = `Round: ${round} / ${maxRounds}`;
 
   pipes.forEach(p => {
     p.top.remove();
