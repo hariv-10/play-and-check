@@ -20,22 +20,6 @@ body {
   position: relative;
 }
 
-/* Clouds */
-.cloud {
-  position: absolute;
-  width: 140px;
-  height: 50px;
-  background: white;
-  border-radius: 50px;
-  opacity: 0.8;
-  animation: cloudMove 30s linear infinite;
-}
-
-@keyframes cloudMove {
-  from { left: -150px; }
-  to { left: 110vw; }
-}
-
 /* Bird */
 #bird {
   position: absolute;
@@ -68,30 +52,17 @@ body {
   z-index: 5;
 }
 
-#score {
-  top: 20px;
-  font-size: 28px;
-}
-
-#round {
-  top: 60px;
-  font-size: 18px;
-}
-
-#ready {
-  top: 45%;
-  font-size: 26px;
-}
+#score { top: 20px; font-size: 28px; }
+#round { top: 60px; font-size: 18px; }
+#ready { top: 45%; font-size: 26px; }
 
 #retry {
   display: none;
   top: 50%;
 }
-
 #retry button {
   font-size: 20px;
   padding: 12px 26px;
-  cursor: pointer;
 }
 
 #scam {
@@ -102,7 +73,6 @@ body {
   color: red;
   text-align: center;
   padding-top: 120px;
-  z-index: 10;
 }
 </style>
 </head>
@@ -110,9 +80,6 @@ body {
 <body>
 
 <div id="game">
-  <div class="cloud" style="top:80px;"></div>
-  <div class="cloud" style="top:160px; animation-duration:40s;"></div>
-
   <div id="score">Score: 0</div>
   <div id="round">Round: 1 / 3</div>
   <div id="ready">Tap or Press SPACE to Fly</div>
@@ -125,12 +92,7 @@ body {
 
 <div id="scam">
   <h1>⚠️ YOU GOT SCAMMED!</h1>
-  <p>This game looked real.</p>
-  <p>Scams also look real.</p>
-  <p><b>Stop. Think. Verify.</b></p>
-  <p>Every day, India sees 3,500+ online financial fraud reports — a 200% spike from last year (National Cyber Security Coordinator).</p>
-  <p>At Experian, we prioritize your safety in the digital age. Beware of fraudsters using fake customer care details, also known as ‘Number Spoofing’ on forums, social media, emails, and messages.</p>
-  <p>They mimic real support lines, risking your data and inviting fraud.</p>
+  <p>Scams look real. Stop. Think. Verify.</p>
 </div>
 
 <script>
@@ -139,7 +101,7 @@ const game = document.getElementById("game");
 
 let birdY = 250;
 let velocity = 0;
-let gravity = 0.6;
+const gravity = 0.6;
 
 let running = false;
 let roundOver = false;
@@ -152,16 +114,10 @@ let pipes = [];
 let gameLoopInterval;
 let pipeInterval;
 
-const birdX = 120;
-const birdWidth = 42;
-const birdHeight = 32;
-const pipeWidth = 70;
-
 /* START GAME */
 function startGame() {
   roundOver = false;
   running = true;
-
   document.getElementById("ready").style.display = "none";
   document.getElementById("retry").style.display = "none";
 
@@ -179,7 +135,6 @@ function flap() {
 document.addEventListener("keydown", e => {
   if (e.code === "Space" || e.code === "ArrowUp") flap();
 });
-
 document.addEventListener("touchstart", e => {
   e.preventDefault();
   flap();
@@ -193,8 +148,16 @@ function gameLoop() {
   birdY += velocity;
   bird.style.top = birdY + "px";
 
-  if (birdY < 0 || birdY > window.innerHeight - birdHeight) {
+  const birdRect = bird.getBoundingClientRect();
+  const gameRect = game.getBoundingClientRect();
+
+  // Ground / ceiling collision (accurate)
+  if (
+    birdRect.top <= gameRect.top ||
+    birdRect.bottom >= gameRect.bottom
+  ) {
     endRound();
+    return;
   }
 
   pipes.forEach(p => {
@@ -202,16 +165,18 @@ function gameLoop() {
     p.top.style.left = p.x + "px";
     p.bottom.style.left = p.x + "px";
 
+    const topRect = p.top.getBoundingClientRect();
+    const bottomRect = p.bottom.getBoundingClientRect();
+
+    // ✅ Pixel-perfect collision
     if (
-      birdX < p.x + pipeWidth &&
-      birdX + birdWidth > p.x &&
-      (birdY < p.topHeight ||
-       birdY + birdHeight > window.innerHeight - p.bottomHeight)
+      rectsOverlap(birdRect, topRect) ||
+      rectsOverlap(birdRect, bottomRect)
     ) {
       endRound();
     }
 
-    if (!p.passed && p.x + pipeWidth < birdX) {
+    if (!p.passed && p.x + 70 < birdRect.left) {
       p.passed = true;
       score++;
       document.getElementById("score").innerText = `Score: ${score}`;
@@ -219,11 +184,23 @@ function gameLoop() {
   });
 }
 
+/* RECTANGLE COLLISION */
+function rectsOverlap(a, b) {
+  return !(
+    a.right < b.left ||
+    a.left > b.right ||
+    a.bottom < b.top ||
+    a.top > b.bottom
+  );
+}
+
 /* CREATE PIPE */
 function createPipe() {
   const gap = 180;
-  const topHeight = Math.random() * 200 + 60;
-  const bottomHeight = window.innerHeight - topHeight - gap;
+  const gameHeight = game.clientHeight;
+
+  const topHeight = Math.random() * 200 + 80;
+  const bottomHeight = gameHeight - topHeight - gap;
 
   const top = document.createElement("div");
   const bottom = document.createElement("div");
@@ -240,9 +217,7 @@ function createPipe() {
   pipes.push({
     top,
     bottom,
-    x: window.innerWidth,
-    topHeight,
-    bottomHeight,
+    x: game.clientWidth,
     passed: false
   });
 }
@@ -288,4 +263,3 @@ function retryRound() {
 
 </body>
 </html>
-
